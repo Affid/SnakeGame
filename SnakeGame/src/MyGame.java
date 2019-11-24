@@ -8,16 +8,21 @@ import org.newdawn.slick.command.*;
 
 public class MyGame extends BasicGame implements  InputProviderListener{
     private int[] lastAction = new int[2];
-    private int count=0;
+    private int count=0,coin=0;
+    private static int delay=170;
     protected static final int STEP =40, HEIGHT =768, WIDTH =1366;
     private Command left = new BasicCommand("LEFT");
     private Command right = new BasicCommand("RIGHT");
     private Command up = new BasicCommand("UP");
     private Command down = new BasicCommand("DOWN");
+    private Command click = new BasicCommand("CLICK");
     private String title;
     private Snake snake;
     private String message=right.toString();
     private static ArrayList<Image> img = new ArrayList<>();
+    private Apple apple;
+    private boolean isStopped=false;
+    private static AppGameContainer appGC;
 
     @Override
     public void controlReleased(Command command) {
@@ -31,6 +36,17 @@ public class MyGame extends BasicGame implements  InputProviderListener{
     @Override
     public String getTitle() {
         return title;
+    }
+
+    public int getCount(){
+        return count;
+    }
+
+    public void setCount(int newCount){
+        if(newCount>0){
+            coin+=newCount-count;
+            count=newCount;
+        }
     }
 
 
@@ -50,12 +66,16 @@ public class MyGame extends BasicGame implements  InputProviderListener{
     @Override
     public void init(GameContainer gameContainer) throws SlickException {
         InputProvider provider = new InputProvider(gameContainer.getInput());
-        gameContainer.getGraphics().setBackground(Color.darkGray    );
+        gameContainer.getGraphics().setBackground(new Color(1,50,32));
+        apple = Apple.getApple();
+        Thread appleThread = new Thread(apple);
+        appleThread.start();
         provider.addListener(this);
         provider.bindCommand(new KeyControl(Input.KEY_LEFT), left);
         provider.bindCommand(new KeyControl(Input.KEY_RIGHT), right);
         provider.bindCommand(new KeyControl(Input.KEY_DOWN), up);
         provider.bindCommand(new KeyControl(Input.KEY_UP), down);
+        provider.bindCommand(new MouseButtonControl(Input.MOUSE_LEFT_BUTTON),click);
         snake = Snake.getSnake();
         snake.addCell();
         snake.addCell();
@@ -68,11 +88,17 @@ public class MyGame extends BasicGame implements  InputProviderListener{
         img.add(new Image("D:\\work\\12.png"));
         img.add(new Image("D:\\work\\12.png"));
         img.add(new Image("D:\\work\\12.png"));
+
     }
 
-    @Override
-    public void update(GameContainer gameContainer, int i) throws SlickException {
-        if(message.equals(left.toString())&&snake.getFirst().getX()> STEP &&snake.get(snake.size()-snake.size()).getX()<=snake.get(snake.size()-snake.size()+1).getX()) //!prevMessage.equals(right.toString()
+    private void checkSnakePos(){
+        if(Math.abs(snake.getFirst().getX()-apple.getX())<40&&Math.abs(snake.getFirst().getY()-apple.getY())<40){
+            apple.eat(this);
+        }
+    }
+
+    private void messageAnalize(){
+        if(message.equals(left.toString())&&snake.getFirst().getX()> STEP &&snake.get(snake.size()-snake.size()).getX()<=snake.get(snake.size()-snake.size()+1).getX())
         {
             lastAction[0] = -STEP;
             lastAction[1] = 0;
@@ -105,15 +131,40 @@ public class MyGame extends BasicGame implements  InputProviderListener{
                 lastAction[1]=0;
             snake.move(lastAction[0], lastAction[1]);
         }
-        count++;
-        if(count==100){
-            img.add(new Image("D:\\work\\12.png"));
+    }
+
+    public void stopIt(){
+        isStopped=true;
+    }
+
+    private void growSnake()throws SlickException{
+        if (coin >= 8) {
+            coin = 0;
             snake.addCell();
-            count=0;
+            img.add(new Image("D:\\work\\12.png"));
         }
+    }
+
+    public void speedUp(){
+        if(message.equals(click.toString())&&count>2) {
+            delay = 100;
+            System.out.println(delay);
+            count-=2;
+        }
+        else
+            delay=170;
+    }
+
+    @Override
+    public void update(GameContainer gameContainer, int i) throws SlickException {
+        apple = Apple.getApple();
+        checkSnakePos();
+        messageAnalize();
+        growSnake();
+        speedUp();
         try {
-            Thread.sleep(170);
-        }catch (InterruptedException e){
+            Thread.sleep(delay);
+        } catch (InterruptedException e) {
             snake.size();
         }
     }
@@ -124,15 +175,20 @@ public class MyGame extends BasicGame implements  InputProviderListener{
 
     @Override
     public void render(GameContainer gameContainer, Graphics graphics) {
-
-        for(int i=snake.size()-1;i>=0;i--){
-            img.get(i).draw(snake.get(i).getX(),snake.get(i).getY());
+        if (!isStopped) {
+            graphics.drawString("Coins: " + this.count, 1250, 50);
+            apple.draw(apple.getX(), apple.getY());
+            for (int i = snake.size() - 1; i >= 0; i--) {
+                img.get(i).draw(snake.get(i).getX(), snake.get(i).getY());
+            }
+        } else {
+            graphics.drawString("Your lost!", 610, 350);
+            graphics.drawString("Your coins: " + this.count, 610, 380);
         }
     }
 
     public static void main(String[] args) {
         try{
-            AppGameContainer appGC;
             appGC = new AppGameContainer(new MyGame("SnakeGame"));
             appGC.setDisplayMode(WIDTH, HEIGHT,false);
             appGC.setShowFPS(false);
@@ -140,6 +196,13 @@ public class MyGame extends BasicGame implements  InputProviderListener{
 
         }catch (SlickException e){
             Logger.getLogger(Game.class.getName()).log(Level.SEVERE,null,e);
+        }
+    }
+
+    public static class SpeedControl extends Thread{
+        @Override
+        public void run() {
+
         }
     }
 }

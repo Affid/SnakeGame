@@ -33,9 +33,6 @@ public class Snake extends LinkedList<SnakeCell> {
             for (int i = 1; i < snake.size(); i++) {
                 snake.get(i).setXY(snake.get(i - 1).getPrevX(), snake.get(i - 1).getPrevY());
             }
-            for (SnakeCell i : snake) {
-                System.out.printf("[%d - %d](%d - %d), ", i.getX(), i.getY(), i.getPrevX(), i.getPrevY());
-            }
         }
     }
 
